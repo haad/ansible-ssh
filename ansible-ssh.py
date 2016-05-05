@@ -42,10 +42,8 @@ def find_host_in_inventory(base, host_name):
   host_vars = None
 
   for i in get_inventory_files(base):
-    print i
     try:
       inv = Inventory(host_list='%s/%s' %(base, i), loader=loader, variable_manager=var_manager)
-      print inv
       host_vars = inv.get_vars(host_name)
     except AnsibleError:
       continue
@@ -78,6 +76,4 @@ ssh_cmd_line.append(find_host_in_inventory(inventory_base, host))
 
 ssh_cmd_line += sys.argv[2::]
 
-print ssh_cmd_line
-
-#subprocess.call(ssh_cmd_line)
+subprocess.call(ssh_cmd_line)
