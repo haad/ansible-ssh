@@ -73,7 +73,9 @@ def find_host_in_inventory(base, host_name):
     else:
       print ("SSH key %s doesn't exists please check path." %(ssh_key))
 
-  if ssh_port and int(ssh_port) <= 65535:
+  if ssh_port:
+    if not int(ssh_port) == min(max(int(ssh_port), 0), 65535):
+      raise Exception('Incorrect port number given')
     host_info += ['-p', str(ssh_port)]
 
   return host_info
@@ -93,8 +95,6 @@ host = sys.argv[1]
 ssh_cmd_line += find_host_in_inventory(inventory_base, host)
 
 ssh_cmd_line += sys.argv[2::]
-
-print ssh_cmd_line
 
 if len(ssh_cmd_line) < 2:
   print("I can't find host or user are you sure that we are in ansible repo directory ?")
