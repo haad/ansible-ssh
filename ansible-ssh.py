@@ -26,7 +26,7 @@ $ ansible-ssh [host] [any ssh-arguments]
 Description:
 This tool will parse all inventory files in ./inventory and for each it will try to find given host.
 If found it will use first match and try to ssh to given host.
-            ''')
+   ''')
    exit(0)
 
 def get_inventory_files(base):
@@ -40,6 +40,7 @@ def find_host_in_inventory(base, host_name):
   loader = DataLoader()
   var_manager = VariableManager()
   host_vars = None
+  host_info = []
 
   for i in get_inventory_files(base):
     try:
@@ -48,17 +49,34 @@ def find_host_in_inventory(base, host_name):
     except AnsibleError:
       continue
 
-    if host_vars:
-      ssh_host = host_vars.get('ansible_ssh_host', None)
-      ssh_user = host_vars.get('ansible_ssh_user', None)
+  if host_vars:
+    ssh_host = host_vars.get('ansible_ssh_host', None)
+    ssh_user = host_vars.get('ansible_ssh_user', None)
+    ssh_key  = host_vars.get('ansible_ssh_private_key_file', None)
+    ssh_port = host_vars.get('ansible_ssh_port', 22)
+  else:
+    raise Exception('Host %s is not present in any inventory %s' %(host_name, ' '.join(get_inventory_files(base))))
+
+  if not ssh_host or not ssh_user:
+    raise Exception('ansible_ssh_host and ansible_ssh_user required.')
+
+  host_info.append(str('%s@%s' %(ssh_user, ssh_host)))
+
+  if ssh_key:
+    ssh_key = os.path.expanduser(ssh_key)
+
+    if not os.path.isabs(ssh_key):
+      ssh_key = os.path.abspath(ssh_key)
+
+    if os.path.exists(ssh_key):
+      host_info += ['-i', str(ssh_key)]
     else:
-      raise Exception('Host %s is not present in any inventory %s' %(host_name, ' '.join(get_inventory_files(base))))
+      print ("SSH key %s doesn't exists please check path." %(ssh_key))
 
-    if not ssh_host or not ssh_user:
-      raise Exception('ansible_ssh_host and ansible_ssh_user required.')
+  if ssh_port and int(ssh_port) <= 65535:
+    host_info += ['-p', str(ssh_port)]
 
-    return '%s@%s' %(ssh_user, ssh_host)
-
+  return host_info
 
 if len(sys.argv) <= 1:
   help()
@@ -72,8 +90,14 @@ host = sys.argv[1]
 
 #args = parser.parse_args()
 
-ssh_cmd_line.append(find_host_in_inventory(inventory_base, host))
+ssh_cmd_line += find_host_in_inventory(inventory_base, host)
 
 ssh_cmd_line += sys.argv[2::]
+
+print ssh_cmd_line
+
+if len(ssh_cmd_line) < 2:
+  print("I can't find host or user are you sure that we are in ansible repo directory ?")
+  exit(1)
 
 subprocess.call(ssh_cmd_line)
