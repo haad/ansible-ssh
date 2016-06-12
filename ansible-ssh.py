@@ -46,7 +46,10 @@ def find_host_in_inventory(base, host_name):
     try:
       inv = Inventory(host_list='%s/%s' %(base, i), loader=loader, variable_manager=var_manager)
       host_vars = inv.get_vars(host_name)
-    except AnsibleError:
+    except AnsibleError as err:
+#      print '%s in inventory %s' %(err, i)
+      inv.host_list = None
+      inv.refresh_inventory()
       continue
 
   if host_vars:
